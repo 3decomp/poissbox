@@ -8,6 +8,7 @@ by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versioning 
 
 ### Added
 
+- Build a linear system (matrix, solution + RHS vectors) from the mesh object
 - Build a 3-D distributed structured mesh using PETSc DMDA
 - Add MPI + PETSc integration
 

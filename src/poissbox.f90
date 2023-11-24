@@ -25,6 +25,11 @@ program poissbox
 
   !! DMDA grid
   type(tDM) :: da
+
+  !! Linear system
+  type(tMat) :: M
+  type(tVec) :: x
+  type(tVec) :: b
   
   !! Initialise MPI & PETSc
   call MPI_Init(ierr) ! Could rely on PetscInitialize
@@ -41,6 +46,9 @@ program poissbox
 
   call initialise_grid(n, da)
   call check_grid(n, da)
+
+  call initialise_linear_system(da, M, x, b)
+  call check_linear_system(n, M, x, b)
   
   !! Finalise MPI & PETSc
   call PetscFinalize(ierr)
@@ -91,8 +99,68 @@ contains
     call MPI_Allreduce(ndof_local, ndof_global, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
 
     ndof_expect = product(nglobal)
-    print *, "Rank ", irank, " has ", ndof_local, " of ", ndof_global, " expected: ", ndof_expect
+    print *, "(DMDA): Rank ", irank, " has ", ndof_local, " of ", ndof_global, " expected: ", ndof_expect
     
   end subroutine check_grid
+
+  subroutine initialise_linear_system(da, M, x, b)
+    !! Given a grid object, build the linear system matrix, solution and RHS vectors.
+
+    type(tDM), intent(in) :: da
+    type(tMat), intent(out) :: M
+    type(tVec), intent(out) :: x
+    type(tVec), intent(out) :: b
+
+    integer :: ierr
+
+    call DMCreateMatrix(da, M, ierr)
+    call MatSetFromOptions(M, ierr)
+    call MatSetUp(M, ierr)
+    
+    call DMCreateGlobalVector(da, x, ierr)
+    call VecSetFromOptions(x, ierr)
+    call VecSetUp(x, ierr)
+
+    call DMCreateGlobalVector(da, b, ierr)
+    call VecSetFromOptions(b, ierr)
+    call VecSetUp(b, ierr)
+    
+  end subroutine initialise_linear_system
+
+  subroutine check_linear_system(nglobal, M, x, b)
+    !! Check that the sizes of the linear system components are sensible.
+
+    integer, dimension(3), intent(in) :: nglobal
+    type(tMat), intent(in) :: M
+    type(tVec), intent(in) :: x
+    type(tVec), intent(in) :: b
+
+    integer :: myrow   ! First row index on this rank
+    integer :: nextrow ! First row index on next rank
+
+    integer :: ndof_local
+    integer :: ndof_global
+    integer :: ndof_expect
+    
+    integer :: ierr
+
+    ndof_expect = product(nglobal)
+
+    call MatGetOwnershipRange(M, myrow, nextrow, ierr)
+    ndof_local = nextrow - myrow
+    call MPI_Allreduce(ndof_local, ndof_global, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
+    print *, "(M): Rank ", irank, " has ", ndof_local, " rows of ", ndof_global, " expected: ", ndof_expect
+
+    call VecGetOwnershipRange(x, myrow, nextrow, ierr)
+    ndof_local = nextrow - myrow
+    call MPI_Allreduce(ndof_local, ndof_global, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
+    print *, "(x): Rank ", irank, " has ", ndof_local, " rows of ", ndof_global, " expected: ", ndof_expect
+
+    call VecGetOwnershipRange(b, myrow, nextrow, ierr)
+    ndof_local = nextrow - myrow
+    call MPI_Allreduce(ndof_local, ndof_global, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
+    print *, "(b): Rank ", irank, " has ", ndof_local, " rows of ", ndof_global, " expected: ", ndof_expect
+
+  end subroutine check_linear_system
   
 end program poissbox
