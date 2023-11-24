@@ -49,6 +49,8 @@ program poissbox
 
   call initialise_linear_system(da, M, x, b)
   call check_linear_system(n, M, x, b)
+
+  call set_solution(da, x)
   
   !! Finalise MPI & PETSc
   call PetscFinalize(ierr)
@@ -162,5 +164,52 @@ contains
     print *, "(b): Rank ", irank, " has ", ndof_local, " rows of ", ndof_global, " expected: ", ndof_expect
 
   end subroutine check_linear_system
+
+  subroutine set_solution(da, x)
+    !! Sets an initial value in the solution vector
+
+    type(tDM), intent(in) :: da
+    type(tVec), intent(inout) :: x
+
+    integer :: istart, jstart, kstart
+    integer :: ni, nj, nk
+
+    integer :: i, j, k
+
+    integer :: ierr
+
+    real(kind(0.0d0)), dimension(:, :, :), pointer :: xdof
+    real(kind(0.0d0)) :: x_p ! Value at DoF P
+    real(kind(0.0d0)) :: xsum, xsum_v ! Vector sum, used to check the vector contents
+
+    xsum = 0.0d0
+
+    call DMDAGetCorners(da, istart, jstart, kstart, ni, nj, nk, ierr)
+
+    call DMDAVecGetArrayF90(da, x, xdof, ierr)
+    
+    do k = kstart, nk - 1
+       do j = jstart, nj - 1
+          do i = istart, ni - 1
+             call random_number(x_p) ! Get random number 0 <= x <= 1
+             x_p = 2 * (0.5d0 - x_p) ! Rescale to -1 <= x <= 1
+
+             xdof(i, j, k) = x_p
+             
+             xsum = xsum + x_p ! Compute vector sum
+          end do
+       end do
+    end do
+
+    call DMDAVecRestoreArrayF90(da, x, xdof, ierr)
+    call VecAssemblyBegin(x, ierr)
+    call VecAssemblyEnd(x, ierr)
+    
+    ! Check vector contents using vector sum
+    call VecSum(x, xsum_v, ierr)
+    call MPI_Allreduce(MPI_IN_PLACE, xsum, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+    print *, "Rank ", irank, "Delta of XSUM norms computed directly and from X: ", xsum_v - xsum, xsum_v, xsum
+
+  end subroutine set_solution
   
 end program poissbox
