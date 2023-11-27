@@ -25,9 +25,13 @@ find_package(MPI REQUIRED COMPONENTS Fortran)
 # PETSc - recommended to
 pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET petsc)
 
-add_executable(poissbox src/poissbox.f90)
+## Build poissbox
+add_library(poissbox src/coefficients.f90)
 target_link_libraries(poissbox MPI::MPI_Fortran)
 target_link_libraries(poissbox PkgConfig::PETSC)
+
+add_executable(poissbox_demo src/poissbox.f90)
+target_link_libraries(poissbox_demo poissbox)
 
 ## Testing
 include(CTest)
