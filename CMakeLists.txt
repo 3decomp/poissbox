@@ -28,3 +28,9 @@ pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET petsc)
 add_executable(poissbox src/poissbox.f90)
 target_link_libraries(poissbox MPI::MPI_Fortran)
 target_link_libraries(poissbox PkgConfig::PETSC)
+
+## Testing
+include(CTest)
+if (BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
