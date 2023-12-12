@@ -12,6 +12,7 @@ module coefficients
 
   private
   public :: lapl_1d_coeffs
+  public :: lapl_star_coeffs
   
 contains
 
@@ -29,5 +30,18 @@ contains
     coeffs(3) = invdx2
     
   end function lapl_1d_coeffs
+
+  ! Compute the Laplacian coefficients for a 7-point "star", returning a 3x3x3 box of coefficients.
+  pure function lapl_star_coeffs(dx, dy, dz) result(coeffs)
+
+    real, intent(in) :: dx, dy, dz
+    real, dimension(3, 3, 3) :: coeffs
+
+    coeffs(:, :, :) = 0.0
+    coeffs(:, 2, 2) = coeffs(:, 2, 2) + lapl_1d_coeffs(dx)
+    coeffs(2, :, 2) = coeffs(2, :, 2) + lapl_1d_coeffs(dy)
+    coeffs(2, 2, :) = coeffs(2, 2, :) + lapl_1d_coeffs(dz)
+    
+  end function lapl_star_coeffs
   
 end module coefficients
