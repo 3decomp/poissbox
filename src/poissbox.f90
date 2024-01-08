@@ -1,62 +1,48 @@
 !!! src/poissbox.f90
 !
-! The poissbox main program.
+! The poissbox library.
 !
 !! License
 !
 ! SPDX-License-Identifier: BSD-3-Clause
 
-program poissbox
+module poissbox
 
   use mpi
   use petsc
+
+  use constants
   
   implicit none
 
-  integer :: nproc ! Number of ranks
-  integer :: irank ! My rank
-  integer :: ierr  ! PETSc error code
-
-  !! Grid dimensions - hardcoded for simplicity
-  integer, parameter :: nx = 64
-  integer, parameter :: ny = 64
-  integer, parameter :: nz = 64
-  integer, dimension(3), parameter :: n = [nx, ny, nz]
+  integer, public :: nproc ! Number of ranks
+  integer, public :: irank ! My rank
 
   !! DMDA grid
-  type(tDM) :: da
+  type(tDM), public :: da
+
+  !! Linear system
+  type(tMat), public :: M
+  type(tVec), public :: x
+  type(tVec), public :: b
+
+  private
+  public :: initialise_grid
+  public :: initialise_linear_system
   
-  !! Initialise MPI & PETSc
-  call MPI_Init(ierr) ! Could rely on PetscInitialize
-  call PetscInitialize(ierr)
-
-  call MPI_Comm_size(MPI_COMM_WORLD, nproc, ierr)
-  call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
-
-  if (irank == 0) then
-     print *, "Running poissbox on ", nproc, " ranks"
-  end if
-  call MPI_Barrier(MPI_COMM_WORLD, ierr)
-  print *, "Hello from ", irank
-
-  call initialise_grid(n, da)
-  call check_grid(n, da)
-  
-  !! Finalise MPI & PETSc
-  call PetscFinalize(ierr)
-  call MPI_Finalize(ierr)
-
 contains
-
+  
   subroutine initialise_grid(nglobal, da)
 
     integer, dimension(3), intent(in) :: nglobal
     type(tDM), intent(out) :: da
+
+    integer :: ierr
     
     !! Create a DMDA grid
     call DMDACreate3d(PETSC_COMM_WORLD, &
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, &
-                      DMDA_STENCIL_STAR, &
+                      DMDA_STENCIL_BOX, &
                       nglobal(1), nglobal(2), nglobal(3), &
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, &
                       1, &
@@ -69,30 +55,28 @@ contains
 
   end subroutine initialise_grid
 
-  subroutine check_grid(nglobal, da)
-    !! Basic test: check that the DMDA grid is the correct size, summing the number of DoF on each
-    !! rank should give the global DoF count.
+  subroutine initialise_linear_system(da, M, x, b)
+    !! Given a grid object, build the linear system matrix, solution and RHS vectors.
 
-    integer, dimension(3), intent(in) :: nglobal
     type(tDM), intent(in) :: da
-
-    integer :: istart, jstart, kstart
-    integer :: ni, nj, nk
+    type(tMat), intent(out) :: M
+    type(tVec), intent(out) :: x
+    type(tVec), intent(out) :: b
 
     integer :: ierr
 
-    integer :: ndof_local
-    integer :: ndof_global
-    integer :: ndof_expect
+    call DMCreateMatrix(da, M, ierr)
+    call MatSetFromOptions(M, ierr)
+    call MatSetUp(M, ierr)
     
-    call DMDAGetCorners(da, istart, jstart, kstart, ni, nj, nk, ierr)
+    call DMCreateGlobalVector(da, x, ierr)
+    call VecSetFromOptions(x, ierr)
+    call VecSetUp(x, ierr)
 
-    ndof_local = ni * nj * nk
-    call MPI_Allreduce(ndof_local, ndof_global, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
-
-    ndof_expect = product(nglobal)
-    print *, "Rank ", irank, " has ", ndof_local, " of ", ndof_global, " expected: ", ndof_expect
+    call DMCreateGlobalVector(da, b, ierr)
+    call VecSetFromOptions(b, ierr)
+    call VecSetUp(b, ierr)
     
-  end subroutine check_grid
+  end subroutine initialise_linear_system
   
-end program poissbox
+end module poissbox
