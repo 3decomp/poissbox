@@ -7,22 +7,24 @@
 ! SPDX-License-Identifier: BSD-3-Clause
 
 program test_star
+
+  use constants
   
   implicit none
 
-  real, parameter :: a = 2.718 ! Parameter for the quadratic formula
-  real, parameter :: b = 1.414 ! Parameter for the quadratic formula
-  real, parameter :: c = 1.848 ! Parameter for the quadratic formula
+  real(pb_dp), parameter :: a = 2.718 ! Parameter for the quadratic formula
+  real(pb_dp), parameter :: b = 1.414 ! Parameter for the quadratic formula
+  real(pb_dp), parameter :: c = 1.848 ! Parameter for the quadratic formula
   
-  real, parameter :: x = 1.618  ! Location for field evaluation
-  real, parameter :: dx = 0.155 ! Grid spacing
+  real(pb_dp), parameter :: x = 1.618  ! Location for field evaluation
+  real(pb_dp), parameter :: dx = 0.155 ! Grid spacing
 
-  real, dimension(3), parameter :: fgx = b * [ x - dx, x, x + dx ]    ! Constant gradient field
-  real, dimension(3), parameter :: fqx = a * [ x - dx, x, x + dx ]**2 ! Quadratic field
+  real(pb_dp), dimension(3), parameter :: fgx = b * [ x - dx, x, x + dx ]    ! Constant gradient field
+  real(pb_dp), dimension(3), parameter :: fqx = a * [ x - dx, x, x + dx ]**2 ! Quadratic field
   
-  real, dimension(3, 3, 3) :: fc
-  real, dimension(3, 3, 3) :: fg
-  real, dimension(3, 3, 3) :: fq
+  real(pb_dp), dimension(3, 3, 3) :: fc
+  real(pb_dp), dimension(3, 3, 3) :: fg
+  real(pb_dp), dimension(3, 3, 3) :: fq
 
   logical :: test_pass
   
@@ -85,7 +87,7 @@ contains
 
   subroutine test_constant_field()
 
-    real :: expected_lapl
+    real(pb_dp):: expected_lapl
 
     expected_lapl = 0.0
 
@@ -95,7 +97,7 @@ contains
 
   subroutine test_constant_grad()
 
-    real :: expected_lapl
+    real(pb_dp):: expected_lapl
 
     expected_lapl = 0.0
 
@@ -105,7 +107,7 @@ contains
 
   subroutine test_quadratic_field()
 
-    real :: expected_lapl
+    real(pb_dp):: expected_lapl
 
     expected_lapl = 3 * (2 * a)
 
@@ -115,12 +117,12 @@ contains
   
   subroutine test_lapl(f, dx, expected_lapl, name)
 
-    real, dimension(3, 3, 3), intent(in) :: f
-    real, intent(in) :: dx
-    real, intent(in) :: expected_lapl
+    real(pb_dp), dimension(3, 3, 3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
+    real(pb_dp), intent(in) :: expected_lapl
     character(len=*), intent(in) :: name
 
-    real :: lapl
+    real(pb_dp):: lapl
     
     lapl = evaluate_laplacian(f, dx)
     if (.not. feq(lapl * dx**2, expected_lapl * dx**2)) then
@@ -130,14 +132,14 @@ contains
     
   end subroutine test_lapl
   
-  real function evaluate_laplacian(f, dx)
+  real(pb_dp)function evaluate_laplacian(f, dx)
 
     use coefficients, only : lapl_star_coeffs
 
-    real, dimension(3, 3, 3), intent(in) :: f
-    real, intent(in) :: dx
+    real(pb_dp), dimension(3, 3, 3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
 
-    real, dimension(3, 3, 3) :: coeffs
+    real(pb_dp), dimension(3, 3, 3) :: coeffs
 
     coeffs = lapl_star_coeffs(dx, dx, dx)
 
@@ -148,12 +150,12 @@ contains
 
   logical function feq(val, ref, opt_tol)
 
-    real, intent(in) :: val ! The value under test
-    real, intent(in) :: ref ! The reference value
-    real, intent(in), optional :: opt_tol ! The tolerance of equality
+    real(pb_dp), intent(in) :: val ! The value under test
+    real(pb_dp), intent(in) :: ref ! The reference value
+    real(pb_dp), intent(in), optional :: opt_tol ! The tolerance of equality
 
-    real :: tol
-    real :: delta
+    real(pb_dp):: tol
+    real(pb_dp):: delta
 
     if (present(opt_tol)) then
        tol = opt_tol

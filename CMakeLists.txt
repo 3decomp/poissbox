@@ -11,6 +11,10 @@ cmake_minimum_required(VERSION 3.10)
 project(poissbox
   LANGUAGES Fortran)
 set(version 0.0)
+set(CMAKE_Fortran_PREPROCESS ON)
+
+set(CMAKE_Fortran_FLAGS "-std=f2018 -ffree-line-length-none")
+set(CMAKE_Fortran_FLAGS_DEBUG "-g -Og -fcheck=all -fimplicit-none -Wall -Wpedantic -Werror -Wimplicit-procedure -Wimplicit-interface")
 
 include(GNUInstallDirs)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
@@ -26,11 +30,15 @@ find_package(MPI REQUIRED COMPONENTS Fortran)
 pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET petsc)
 
 ## Build poissbox
-add_library(poissbox src/coefficients.f90)
+add_library(poissbox
+  src/constants.f90
+  src/coefficients.f90
+  src/poissbox.f90)
+
 target_link_libraries(poissbox MPI::MPI_Fortran)
 target_link_libraries(poissbox PkgConfig::PETSC)
 
-add_executable(poissbox_demo src/poissbox.f90)
+add_executable(poissbox_demo src/example.f90)
 target_link_libraries(poissbox_demo poissbox)
 
 ## Testing

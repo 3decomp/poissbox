@@ -8,20 +8,22 @@
 
 program test_d2dx2
 
+  use constants
+  
   implicit none
 
-  real, parameter :: a = 2.718 ! Parameter for the quadratic formula
-  real, parameter :: b = 1.414 ! Parameter for the quadratic formula
-  real, parameter :: c = 1.848 ! Parameter for the quadratic formula
+  real(pb_dp), parameter :: a = 2.718 ! Parameter for the quadratic formula
+  real(pb_dp), parameter :: b = 1.414 ! Parameter for the quadratic formula
+  real(pb_dp), parameter :: c = 1.848 ! Parameter for the quadratic formula
   
-  real, parameter :: x = 1.618  ! Location for field evaluation
-  real, parameter :: dx = 0.155 ! Grid spacing
+  real(pb_dp), parameter :: x = 1.618  ! Location for field evaluation
+  real(pb_dp), parameter :: dx = 0.155 ! Grid spacing
   
-  real, dimension(3), parameter :: fc = [ c, c, c ]                  ! Constant field
-  real, dimension(3), parameter :: fg = b * [ x - dx, x, x + dx ]    ! Constant gradient field
-  real, dimension(3), parameter :: fq = a * [ x - dx, x, x + dx ]**2 ! Quadratic field
+  real(pb_dp), dimension(3), parameter :: fc = [ c, c, c ]                  ! Constant field
+  real(pb_dp), dimension(3), parameter :: fg = b * [ x - dx, x, x + dx ]    ! Constant gradient field
+  real(pb_dp), dimension(3), parameter :: fq = a * [ x - dx, x, x + dx ]**2 ! Quadratic field
 
-  real, parameter :: shift = 17.29 ! Shift to apply to fields
+  real(pb_dp), parameter :: shift = 17.29 ! Shift to apply to fields
 
   logical :: test_pass = .true.
   
@@ -41,7 +43,7 @@ contains
 
   subroutine test_constant_field()
 
-    real :: lapl, expected_lapl
+    real(pb_dp):: expected_lapl
 
     !! Laplacian of a constant field is 0
     expected_lapl = 0.0
@@ -55,7 +57,7 @@ contains
 
   subroutine test_constant_grad()
 
-    real :: expected_lapl
+    real(pb_dp):: expected_lapl
 
     !! Laplacian of a constant gradient field is 0
     expected_lapl = 0.0
@@ -69,7 +71,7 @@ contains
 
   subroutine test_quadratic_field()
 
-    real :: expected_lapl
+    real(pb_dp):: expected_lapl
 
     !! Laplacian of a quadratic field is 2 * a
     expected_lapl = 2 * a
@@ -82,12 +84,12 @@ contains
 
   subroutine test_lapl(f, dx, expected_lapl, name)
 
-    real, dimension(3), intent(in) :: f
-    real, intent(in) :: dx
-    real, intent(in) :: expected_lapl
+    real(pb_dp), dimension(3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
+    real(pb_dp), intent(in) :: expected_lapl
     character(len=*), intent(in) :: name
 
-    real :: lapl
+    real(pb_dp):: lapl
     
     lapl = evaluate_laplacian(f, dx)
     if (.not. feq(lapl * dx**2, expected_lapl * dx**2)) then
@@ -99,12 +101,12 @@ contains
 
   subroutine test_scaled_lapl(f, dx, expected_lapl, name)
 
-    real, dimension(3), intent(in) :: f
-    real, intent(in) :: dx
-    real, intent(in) :: expected_lapl
+    real(pb_dp), dimension(3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
+    real(pb_dp), intent(in) :: expected_lapl
     character(len=*), intent(in) :: name
 
-    real :: lapl
+    real(pb_dp):: lapl
     
     lapl = evaluate_laplacian(2 * f, dx)
     if (.not. feq(lapl, 2 * expected_lapl)) then
@@ -123,12 +125,12 @@ contains
 
   subroutine test_shifted_lapl(f, dx, expected_lapl, name)
 
-    real, dimension(3), intent(in) :: f
-    real, intent(in) :: dx
-    real, intent(in) :: expected_lapl
+    real(pb_dp), dimension(3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
+    real(pb_dp), intent(in) :: expected_lapl
     character(len=*), intent(in) :: name
 
-    real :: lapl
+    real(pb_dp):: lapl
 
     lapl = evaluate_laplacian(f + shift, dx)
     if (.not. feq(lapl * dx**2, expected_lapl * dx**2)) then
@@ -147,12 +149,12 @@ contains
 
   subroutine test_spacing_lapl(f, dx, expected_lapl, name)
 
-    real, dimension(3), intent(in) :: f
-    real, intent(in) :: dx
-    real, intent(in) :: expected_lapl
+    real(pb_dp), dimension(3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
+    real(pb_dp), intent(in) :: expected_lapl
     character(len=*), intent(in) :: name
 
-    real :: lapl
+    real(pb_dp):: lapl
 
     lapl = evaluate_laplacian(f, 2 * dx)
     if (.not. feq(lapl * (2 * dx)**2, expected_lapl * (2 * dx)**2)) then
@@ -169,14 +171,14 @@ contains
     
   end subroutine test_spacing_lapl
   
-  real function evaluate_laplacian(f, dx)
+  real(pb_dp)function evaluate_laplacian(f, dx)
 
     use coefficients, only : lapl_1d_coeffs
 
-    real, dimension(3), intent(in) :: f
-    real, intent(in) :: dx
+    real(pb_dp), dimension(3), intent(in) :: f
+    real(pb_dp), intent(in) :: dx
 
-    real, dimension(3) :: coeffs
+    real(pb_dp), dimension(3) :: coeffs
 
     coeffs = lapl_1d_coeffs(dx)
 
@@ -191,12 +193,12 @@ contains
 
   logical function feq(val, ref, opt_tol)
 
-    real, intent(in) :: val ! The value under test
-    real, intent(in) :: ref ! The reference value
-    real, intent(in), optional :: opt_tol ! The tolerance of equality
+    real(pb_dp), intent(in) :: val ! The value under test
+    real(pb_dp), intent(in) :: ref ! The reference value
+    real(pb_dp), intent(in), optional :: opt_tol ! The tolerance of equality
 
-    real :: tol
-    real :: delta
+    real(pb_dp):: tol
+    real(pb_dp):: delta
 
     if (present(opt_tol)) then
        tol = opt_tol
