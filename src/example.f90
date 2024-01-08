@@ -181,24 +181,26 @@ contains
     type(tVec), intent(in) :: x ! The (specified) solution
     type(tVec), intent(in) :: b ! The Laplacian approximation, computed as b = Mx
 
-    type(tVec) :: c ! The Laplacian approximation, computed pointwise
+    type(tVec) :: b2 ! Copy of the Laplacian approximation
+    type(tVec) :: c  ! The Laplacian approximation, computed pointwise
     real(pb_dp) :: residual ! The residual norm between expected and computed Laplacian fields.
 
     integer :: ierr
 
-    call VecDuplicate(b, c, ierr)
-    call VecNorm(b, NORM_2, residual, ierr)
+    call VecDuplicate(b, b2, ierr)
+    call VecCopy(b, b2, ierr)
     
+    call VecDuplicate(b, c, ierr)
     call compute_lapl_pointwise(da, x, c)
-    call VecNorm(c, NORM_2, residual, ierr)
     
     ! Compute the norm of the difference between computed Laplacian, and the result computed
     ! pointwise
-    call VecAXPY(b, -1.0d0, c, ierr) ! Computes b = alpha * c + b, alpha = -1
-    call VecNorm(b, NORM_2, residual, ierr)
+    call VecAXPY(b2, -1.0d0, c, ierr) ! Computes b = alpha * c + b, alpha = -1
+    call VecNorm(b2, NORM_2, residual, ierr)
 
     print *, "Rank ", irank, "Delta between b=Mx and pointwise calculation: ", residual
 
+    call VecDestroy(b2, ierr)
     call VecDestroy(c, ierr)
     
   end subroutine check_lapl
