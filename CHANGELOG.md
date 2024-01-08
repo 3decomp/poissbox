@@ -8,6 +8,7 @@ by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versioning 
 
 ### Added
 
+- Solve linear system and check error
 - Assembly of 2nd-order Laplacian operator and evaluation via matrix-vector product
 - Solution vector value initialisation (for computing reference RHS, etc.)
 - Build a linear system (matrix, solution + RHS vectors) from the mesh object

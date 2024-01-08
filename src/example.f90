@@ -32,10 +32,16 @@ program poissbox_example
   real(pb_dp), parameter :: dx = Lx / nx
   real(pb_dp), parameter :: dy = Ly / ny
   real(pb_dp), parameter :: dz = Lz / nz
+
+  !! Local variables
+  real(pb_dp) :: error
+  type(tKSP) :: ksp
+  type(tVec) :: x2
+  type(tMatNullSpace) :: nsp
   
   !! Initialise MPI & PETSc
   call MPI_Init(ierr) ! Could rely on PetscInitialize
-  call PetscInitialize(ierr)
+  call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
 
   call MPI_Comm_size(MPI_COMM_WORLD, nproc, ierr)
   call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
@@ -57,6 +63,20 @@ program poissbox_example
   call set_solution(da, x)
   call MatMult(M, x, b, ierr)
   call check_lapl(da, x, b)
+
+  ! Solve the linear system and compare against the specified solution
+  call MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, PETSC_NULL_VEC, nsp, ierr)
+  call MatSetNullSpace(M, nsp, ierr)
+  call MatNullSpaceDestroy(nsp, ierr)
+  call KSPCreate(PETSC_COMM_WORLD, ksp, ierr)
+  call VecDuplicate(x, x2, ierr)
+  call KSPSetOperators(ksp, M, M, ierr)
+  call KSPSetFromOptions(ksp, ierr)
+  call KSPSolve(ksp, b, x, ierr)
+  call MatMult(M, x, x2, ierr)
+  call VecAXPY(x2, -1.0d0, b, ierr)
+  call VecNorm(x2, NORM_2, error, ierr)
+  print *, "Solution residual (L2 norm): ", error
   
   !! Finalise MPI & PETSc
   call PetscFinalize(ierr)
