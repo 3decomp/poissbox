@@ -29,6 +29,7 @@ module poissbox
   private
   public :: initialise_grid
   public :: initialise_linear_system
+  public :: solve
   
 contains
   
@@ -78,5 +79,31 @@ contains
     call VecSetUp(b, ierr)
     
   end subroutine initialise_linear_system
+
+  subroutine solve(M, x, b)
+    !! Solve the linear system.
+    !
+    !! XXX: Currently hardcoded to treat periodic/Neumann (singular) problems.
+    
+    type(tMat), intent(in) :: M    ! The system matrix
+    type(tVec), intent(inout) :: x ! The solution vector
+    type(tVec), intent(in) :: b    ! The RHS vector
+
+    type(tKSP) :: ksp
+    type(tMatNullSpace) :: nsp
+
+    integer :: ierr
+
+    ! XXX: Periodic/Neumann problems require a null-space to remove the constant solution
+    call MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, PETSC_NULL_VEC, nsp, ierr)
+    call MatSetNullSpace(M, nsp, ierr)
+    call MatNullSpaceDestroy(nsp, ierr)
+
+    call KSPCreate(PETSC_COMM_WORLD, ksp, ierr)
+    call KSPSetOperators(ksp, M, M, ierr)
+    call KSPSetFromOptions(ksp, ierr)
+    call KSPSolve(ksp, b, x, ierr)
+    
+  end subroutine solve
   
 end module poissbox

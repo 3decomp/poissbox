@@ -32,10 +32,14 @@ program poissbox_example
   real(pb_dp), parameter :: dx = Lx / nx
   real(pb_dp), parameter :: dy = Ly / ny
   real(pb_dp), parameter :: dz = Lz / nz
+
+  !! Local variables
+  real(pb_dp) :: error
+  type(tVec) :: x2
   
   !! Initialise MPI & PETSc
   call MPI_Init(ierr) ! Could rely on PetscInitialize
-  call PetscInitialize(ierr)
+  call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
 
   call MPI_Comm_size(MPI_COMM_WORLD, nproc, ierr)
   call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
@@ -57,6 +61,14 @@ program poissbox_example
   call set_solution(da, x)
   call MatMult(M, x, b, ierr)
   call check_lapl(da, x, b)
+
+  ! Solve the linear system and compare against the specified solution
+  call solve(M, x, b)
+  call VecDuplicate(x, x2, ierr)
+  call MatMult(M, x, x2, ierr)
+  call VecAXPY(x2, -1.0d0, b, ierr)
+  call VecNorm(x2, NORM_2, error, ierr)
+  print *, "Solution residual (L2 norm): ", error
   
   !! Finalise MPI & PETSc
   call PetscFinalize(ierr)
@@ -181,29 +193,33 @@ contains
     type(tVec), intent(in) :: x ! The (specified) solution
     type(tVec), intent(in) :: b ! The Laplacian approximation, computed as b = Mx
 
-    type(tVec) :: c ! The Laplacian approximation, computed pointwise
+    type(tVec) :: b2 ! Copy of the Laplacian approximation
+    type(tVec) :: c  ! The Laplacian approximation, computed pointwise
     real(pb_dp) :: residual ! The residual norm between expected and computed Laplacian fields.
 
     integer :: ierr
 
-    call VecDuplicate(b, c, ierr)
-    call VecNorm(b, NORM_2, residual, ierr)
+    call VecDuplicate(b, b2, ierr)
+    call VecCopy(b, b2, ierr)
     
+    call VecDuplicate(b, c, ierr)
     call compute_lapl_pointwise(da, x, c)
-    call VecNorm(c, NORM_2, residual, ierr)
     
     ! Compute the norm of the difference between computed Laplacian, and the result computed
     ! pointwise
-    call VecAXPY(b, -1.0d0, c, ierr) ! Computes b = alpha * c + b, alpha = -1
-    call VecNorm(b, NORM_2, residual, ierr)
+    call VecAXPY(b2, -1.0d0, c, ierr) ! Computes b = alpha * c + b, alpha = -1
+    call VecNorm(b2, NORM_2, residual, ierr)
 
     print *, "Rank ", irank, "Delta between b=Mx and pointwise calculation: ", residual
 
+    call VecDestroy(b2, ierr)
     call VecDestroy(c, ierr)
     
   end subroutine check_lapl
 
   subroutine compute_lapl_pointwise(da, x, b)
+    !! Apply the Laplacian stencil to the given solution pointwise - this should be identical to
+    !! using the matrix-vector product.
 
     type(tDM), intent(in) :: da
     type(tVec), intent(in) :: x ! The (specified) solution
@@ -245,11 +261,12 @@ contains
   end subroutine compute_lapl_pointwise
 
   real(pb_dp) pure function evaluate_laplacian_pointwise(f, grid_deltas)
-
+    !! Applies the Laplacian stencil at a point.
+    
     use coefficients, only: lapl_star_coeffs
     
-    real(pb_dp), dimension(3, 3, 3), intent(in) :: f
-    real(pb_dp), dimension(3), intent(in) :: grid_deltas
+    real(pb_dp), dimension(3, 3, 3), intent(in) :: f     ! The field within the stencil region
+    real(pb_dp), dimension(3), intent(in) :: grid_deltas ! The X,Y,Z grid spacing
 
     real(pb_dp) :: dx, dy, dz
     
