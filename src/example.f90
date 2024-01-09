@@ -35,9 +35,7 @@ program poissbox_example
 
   !! Local variables
   real(pb_dp) :: error
-  type(tKSP) :: ksp
   type(tVec) :: x2
-  type(tMatNullSpace) :: nsp
   
   !! Initialise MPI & PETSc
   call MPI_Init(ierr) ! Could rely on PetscInitialize
@@ -65,14 +63,8 @@ program poissbox_example
   call check_lapl(da, x, b)
 
   ! Solve the linear system and compare against the specified solution
-  call MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, PETSC_NULL_VEC, nsp, ierr)
-  call MatSetNullSpace(M, nsp, ierr)
-  call MatNullSpaceDestroy(nsp, ierr)
-  call KSPCreate(PETSC_COMM_WORLD, ksp, ierr)
+  call solve(M, x, b)
   call VecDuplicate(x, x2, ierr)
-  call KSPSetOperators(ksp, M, M, ierr)
-  call KSPSetFromOptions(ksp, ierr)
-  call KSPSolve(ksp, b, x, ierr)
   call MatMult(M, x, x2, ierr)
   call VecAXPY(x2, -1.0d0, b, ierr)
   call VecNorm(x2, NORM_2, error, ierr)
@@ -226,6 +218,8 @@ contains
   end subroutine check_lapl
 
   subroutine compute_lapl_pointwise(da, x, b)
+    !! Apply the Laplacian stencil to the given solution pointwise - this should be identical to
+    !! using the matrix-vector product.
 
     type(tDM), intent(in) :: da
     type(tVec), intent(in) :: x ! The (specified) solution
@@ -267,11 +261,12 @@ contains
   end subroutine compute_lapl_pointwise
 
   real(pb_dp) pure function evaluate_laplacian_pointwise(f, grid_deltas)
-
+    !! Applies the Laplacian stencil at a point.
+    
     use coefficients, only: lapl_star_coeffs
     
-    real(pb_dp), dimension(3, 3, 3), intent(in) :: f
-    real(pb_dp), dimension(3), intent(in) :: grid_deltas
+    real(pb_dp), dimension(3, 3, 3), intent(in) :: f     ! The field within the stencil region
+    real(pb_dp), dimension(3), intent(in) :: grid_deltas ! The X,Y,Z grid spacing
 
     real(pb_dp) :: dx, dy, dz
     
