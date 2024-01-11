@@ -14,6 +14,7 @@ program poissbox_example
   use constants
   use coefficients
   use poissbox
+  use matfree_types
   
   implicit none
 
@@ -36,6 +37,7 @@ program poissbox_example
   !! Local variables
   real(pb_dp) :: error
   type(tVec) :: x2
+  type(mat_ctx) :: ctx
   
   !! Initialise MPI & PETSc
   call MPI_Init(ierr) ! Could rely on PetscInitialize
@@ -53,19 +55,30 @@ program poissbox_example
   call initialise_grid(n, da)
   call check_grid(n, da)
 
-  call initialise_linear_system(da, M, x, b)
-  call check_linear_system(n, M, x, b)
-  call assemble_laplacian(da, dx, dy, dz, M)
+  ctx%da = da
+  ctx%grid_deltas = [dx, dy, dz]
+  if (.true.) then ! Set true to use matrix-free system
+     call initialise_linear_system(da, ctx, P, A, x, b)
+  else
+     call initialise_linear_system(da, ctx, P, P, x, b)
+     A = P
+  end if
+  call check_linear_system(n, P, x, b)
+  call assemble_laplacian(da, dx, dy, dz, P)
 
   ! Set a solution, apply the linear operator and check its pointwise approximation of the Laplacian
   call set_solution(da, x)
-  call MatMult(M, x, b, ierr)
+  print *, "Calling MatMult"
+  call MatMult(A, x, b, ierr)
   call check_lapl(da, x, b)
 
+  call check_matrices(A, P, x)
+
   ! Solve the linear system and compare against the specified solution
-  call solve(M, x, b)
+  call solve(P, A, x, b)
   call VecDuplicate(x, x2, ierr)
-  call MatMult(M, x, x2, ierr)
+  print *, "Calling MatMult"
+  call MatMult(A, x, x2, ierr)
   call VecAXPY(x2, -1.0d0, b, ierr)
   call VecNorm(x2, NORM_2, error, ierr)
   print *, "Solution residual (L2 norm): ", error
@@ -189,6 +202,8 @@ contains
     !! Checks the Laplacian calculation computed by matrix-vector product vs the pointwise
     !! computation using the stencil operator (the two should be identical).
 
+    use compute_lapl
+    
     type(tDM), intent(in) :: da
     type(tVec), intent(in) :: x ! The (specified) solution
     type(tVec), intent(in) :: b ! The Laplacian approximation, computed as b = Mx
@@ -203,7 +218,7 @@ contains
     call VecCopy(b, b2, ierr)
     
     call VecDuplicate(b, c, ierr)
-    call compute_lapl_pointwise(da, x, c)
+    call compute_lapl_pointwise(da, [dx, dy, dz], x, c)
     
     ! Compute the norm of the difference between computed Laplacian, and the result computed
     ! pointwise
@@ -217,69 +232,32 @@ contains
     
   end subroutine check_lapl
 
-  subroutine compute_lapl_pointwise(da, x, b)
-    !! Apply the Laplacian stencil to the given solution pointwise - this should be identical to
-    !! using the matrix-vector product.
+  subroutine check_matrices(P, A, x)
 
-    type(tDM), intent(in) :: da
-    type(tVec), intent(in) :: x ! The (specified) solution
-    type(tVec), intent(in) :: b ! The Laplacian approximation, computed as b_i = stencil_op(x, i)
+    type(tMat), intent(in) :: P ! Preconditioner matrix
+    type(tMat), intent(in) :: A ! System matrix
+    type(tVec), intent(in) :: x ! Solution vector
 
-    integer :: istart, jstart, kstart
-    integer :: ni, nj, nk
+    type(tVec) :: bP, bA ! Vectors for computing matvecs
 
-    integer :: i, j, k
-    
+    real(pb_dp) :: delta
+
     integer :: ierr
 
-    type(tVec) :: xlocal ! Ghosted x
-    real(pb_dp), dimension(:, :, :), pointer :: xdof
-    real(pb_dp), dimension(:, :, :), pointer :: bdof
+    call VecDuplicate(x, bP, ierr)
+    call VecDuplicate(x, bA, ierr)
 
-    call DMCreateLocalVector(da, xlocal, ierr)
-    call DMGlobalToLocal(da, x, INSERT_VALUES, xlocal, ierr)
+    call MatMult(P, x, bP, ierr)
+    call MatMult(A, x, bA, ierr)
+
+    call VecAXPY(bA, -1.0d0, bP, ierr)
+    call VecNorm(bA, NORM_2, delta, ierr)
+
+    print *, "Ax - Px = ", delta
     
-    call DMDAGetCorners(da, istart, jstart, kstart, ni, nj, nk, ierr)
-
-    call DMDAVecGetArrayF90(da, xlocal, xdof, ierr)
-    call DMDAVecGetArrayF90(da, b, bdof, ierr)
-
-    do k = kstart, nk - 1
-       do j = jstart, nj - 1
-          do i = istart, ni - 1
-             bdof(i, j, k) = evaluate_laplacian_pointwise(xdof(i-1:i+1, j-1:j+1, k-1:k+1), &
-                                                          [dx, dy, dz])
-          end do
-       end do
-    end do
-
-    call DMDAVecRestoreArrayF90(da, xlocal, xdof, ierr)
-    call DMDAVecRestoreArrayF90(da, b, bdof, ierr)
-
-    call VecDestroy(xlocal, ierr)
-
-  end subroutine compute_lapl_pointwise
-
-  real(pb_dp) pure function evaluate_laplacian_pointwise(f, grid_deltas)
-    !! Applies the Laplacian stencil at a point.
+    call VecDestroy(bP, ierr)
+    call VecDestroy(bA, ierr)
     
-    use coefficients, only: lapl_star_coeffs
-    
-    real(pb_dp), dimension(3, 3, 3), intent(in) :: f     ! The field within the stencil region
-    real(pb_dp), dimension(3), intent(in) :: grid_deltas ! The X,Y,Z grid spacing
-
-    real(pb_dp) :: dx, dy, dz
-    
-    real(pb_dp), dimension(3, 3, 3) :: coeffs
-
-    dx = grid_deltas(1)
-    dy = grid_deltas(2)
-    dz = grid_deltas(3)
-    coeffs = lapl_star_coeffs(dx, dy, dz)
-
-    evaluate_laplacian_pointwise = dot_product(reshape(f, [size(f)]), &
-                                               reshape(coeffs, [size(coeffs)]))
-
-  end function evaluate_laplacian_pointwise
+  end subroutine check_matrices
   
 end program poissbox_example

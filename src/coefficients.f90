@@ -73,9 +73,11 @@ contains
     
     call DMDAGetCorners(da, istart, jstart, kstart, ni, nj, nk, ierr)
 
-    do k = kstart, nk - 1
-       do j = jstart, nj - 1
-          do i = istart, ni - 1
+    do k = kstart, kstart + nk - 1
+       do j = jstart, jstart + nj - 1
+          do i = istart, istart + ni - 1
+             mat_coeffs(:) = 0.0_pb_dp
+             
              ! Get coefficients at point
              coeffs = lapl_star_coeffs(dx, dy, dz)
 
