@@ -14,7 +14,7 @@ set(version 0.0)
 set(CMAKE_Fortran_PREPROCESS ON)
 
 set(CMAKE_Fortran_FLAGS "-std=f2018 -ffree-line-length-none")
-set(CMAKE_Fortran_FLAGS_DEBUG "-g -Og -fcheck=all -fimplicit-none -Wall -Wpedantic -Werror -Wimplicit-procedure -Wimplicit-interface")
+set(CMAKE_Fortran_FLAGS_DEBUG "-g -Og -fcheck=all -fimplicit-none -Wall -Wpedantic -Werror")
 
 include(GNUInstallDirs)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})

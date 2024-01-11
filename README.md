@@ -32,3 +32,18 @@ $ mpirun -np 3 ./build/bin/poissbox
  Rank            2  has        86016  of       262144  expected:       262144
 ```
 this confirms that no errors occur when initialising the `PETSc` data structures.
+
+## Running poissbox
+
+Running the `poissbox_demo` executable as above will run with the `PETSc` default linear
+solver/preconditioner combination.
+A better solver and preconditioner for Poisson problems is multigrid-preconditioned conjugate
+gradient, this can be selected at runtime
+```
+$ mpirun -np 4 ./build/bin/poissbox_demo -ksp_type cg -pc_type gamg -mg_coarse_sub_pc_type svd \
+    -mg_levels_ksp_rtol 1.0e-4 -mg_levels_ksp_type richardson -mg_levels_pc_type sor
+```
+where the first 2 options set the linear solver and preconditioner, the rest are recommended
+customisations of the multigrid preconditioner from `PETSc` that have also been found effective here.
+The tolerance can be controlled by setting `-ksp_rtol`, additional information on the linear solver
+can be printed by adding `-ksp_monitor -ksp_converged_reason`.
