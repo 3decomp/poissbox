@@ -8,3 +8,6 @@
 
 # Coefficient tests
 add_subdirectory(coefficients)
+
+# Tridiagonal solver tests
+add_subdirectory(tridiag)

@@ -33,6 +33,7 @@ pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET petsc)
 add_library(poissbox
   src/constants.f90
   src/coefficients.f90
+  src/tridsol.f90
   src/poissbox.f90)
 
 target_link_libraries(poissbox MPI::MPI_Fortran)
