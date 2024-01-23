@@ -21,10 +21,10 @@ contains
   
   subroutine tdma(a, b, c, d)
 
-    real(pb_dp), dimension(:), allocatable, intent(in) :: a ! Sub-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: b ! Super-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(in) :: c ! Diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: d ! RHS/solution
+    real(pb_dp), dimension(:), intent(in) :: a ! Sub-diagonal
+    real(pb_dp), dimension(:), intent(inout) :: b ! Super-diagonal
+    real(pb_dp), dimension(:), intent(in) :: c ! Diagonal
+    real(pb_dp), dimension(:), intent(inout) :: d ! RHS/solution
 
     call fwd_sweep(a, b, c, d)
     call bwd_sweep(b, c, d)
@@ -33,10 +33,10 @@ contains
   
   subroutine tdma_periodic(a, b, c, d)
 
-    real(pb_dp), dimension(:), allocatable, intent(in) :: a ! Sub-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: b ! Super-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(in) :: c ! Diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: d ! RHS/solution
+    real(pb_dp), dimension(:), intent(in) :: a ! Sub-diagonal
+    real(pb_dp), dimension(:), intent(inout) :: b ! Super-diagonal
+    real(pb_dp), dimension(:), intent(in) :: c ! Diagonal
+    real(pb_dp), dimension(:), intent(inout) :: d ! RHS/solution
 
     integer :: n
 
@@ -75,10 +75,10 @@ contains
 
   subroutine fwd_sweep(a, b, c, d)
 
-    real(pb_dp), dimension(:), allocatable, intent(in) :: a ! Sub-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: b ! Super-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(in) :: c ! Diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: d ! RHS
+    real(pb_dp), dimension(:), intent(in) :: a ! Sub-diagonal
+    real(pb_dp), dimension(:), intent(inout) :: b ! Super-diagonal
+    real(pb_dp), dimension(:), intent(in) :: c ! Diagonal
+    real(pb_dp), dimension(:), intent(inout) :: d ! RHS
 
     real(pb_dp) :: w
     integer :: i
@@ -97,9 +97,9 @@ contains
 
   subroutine bwd_sweep(b, c, d)
 
-    real(pb_dp), dimension(:), allocatable, intent(in) :: b    ! Diagonal
-    real(pb_dp), dimension(:), allocatable, intent(in) :: c    ! Super-diagonal
-    real(pb_dp), dimension(:), allocatable, intent(inout) :: d ! Solution
+    real(pb_dp), dimension(:), intent(in) :: b    ! Diagonal
+    real(pb_dp), dimension(:), intent(in) :: c    ! Super-diagonal
+    real(pb_dp), dimension(:), intent(inout) :: d ! Solution
 
     integer :: i
 
