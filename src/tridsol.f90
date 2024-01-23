@@ -13,7 +13,7 @@ module tridsol
   implicit none
 
   private
-  public :: tdma
+  public :: tdma, tdma_periodic
   public :: fwd_sweep ! Exported for testing purposes 
   public :: bwd_sweep ! Exported for testing purposes
   
@@ -30,6 +30,48 @@ contains
     call bwd_sweep(b, c, d)
     
   end subroutine tdma
+  
+  subroutine tdma_periodic(a, b, c, d)
+
+    real(pb_dp), dimension(:), allocatable, intent(in) :: a ! Sub-diagonal
+    real(pb_dp), dimension(:), allocatable, intent(inout) :: b ! Super-diagonal
+    real(pb_dp), dimension(:), allocatable, intent(in) :: c ! Diagonal
+    real(pb_dp), dimension(:), allocatable, intent(inout) :: d ! RHS/solution
+
+    integer :: n
+
+    ! Auxilliary systems
+    real(pb_dp) :: gamma
+    real(pb_dp), dimension(:), allocatable :: bmod
+    real(pb_dp), dimension(:), allocatable :: u
+
+    n = size(a)
+    
+    ! Select gamma to increase diagonal dominance
+    gamma = -b(1)
+
+    ! Solve auxilliary systems
+    bmod = b
+    bmod(1) = bmod(1) - gamma
+    bmod(n) = bmod(n) - c(n) * a(1) / gamma
+    call tdma(a, bmod, c, d)
+
+    bmod = b
+    bmod(1) = bmod(1) - gamma
+    bmod(n) = bmod(n) - c(n) * a(1) / gamma
+    allocate(u(n))
+    u(:) = 0.0_pb_dp
+    u(1) = gamma
+    u(n) = c(n)
+    call tdma(a, bmod, c, u)
+
+    ! Assemble solution
+    d(:) = d(:) - (u(:) * (d(1) + (a(1) / gamma) * d(n))) &
+         / (1.0_pb_dp + (u(1) + (a(1) / gamma) * u(n)))
+
+    deallocate(u)
+    
+  end subroutine tdma_periodic
 
   subroutine fwd_sweep(a, b, c, d)
 
