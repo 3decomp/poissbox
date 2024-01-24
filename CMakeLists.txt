@@ -34,6 +34,7 @@ add_library(poissbox
   src/constants.f90
   src/coefficients.f90
   src/tridsol.f90
+  src/compact_schemes.f90
   src/poissbox.f90)
 
 target_link_libraries(poissbox MPI::MPI_Fortran)
