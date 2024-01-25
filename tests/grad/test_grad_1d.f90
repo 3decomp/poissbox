@@ -1,4 +1,4 @@
-program test_grad
+program test_grad_1d
 
   use constants
   use compact_schemes
@@ -76,4 +76,4 @@ contains
     
   end subroutine check_constant_field
   
-end program test_grad
+end program test_grad_1d
