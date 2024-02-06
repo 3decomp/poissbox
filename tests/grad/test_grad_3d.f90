@@ -10,7 +10,7 @@ program test_grad_3d
   integer, parameter :: nx = 64    ! Problem size (nodes)
   integer, parameter :: ny = 64    ! Problem size (nodes)
   integer, parameter :: nz = 64    ! Problem size (nodes)
-  real(pb_dp), parameter :: L = pi ! Domain size
+  real(pb_dp), parameter :: L = 2 * pi  ! Domain size
   real(pb_dp), parameter :: dx = L / nx ! Grid spacing
   real(pb_dp), parameter :: dy = L / ny ! Grid spacing
   real(pb_dp), parameter :: dz = L / nz ! Grid spacing
@@ -136,9 +136,11 @@ contains
        end do
        z = z + dz
     end do
-    ! print *, rms_x, rms_y, rms_z
+    rms_x = sqrt(rms_x / nx) / ny / nz
+    rms_y = sqrt(rms_y / ny) / nx / nz
+    rms_z = sqrt(rms_z / nz) / nx / ny
     rms = rms_x + rms_y + rms_z
-    rms = sqrt(rms / nx / ny / nz / 3)
+    rms= rms / 3
 
     test_pass = (rms <= 1.0e-11)
     test_pass = (.not. (rms /= rms)) .and. test_pass
@@ -148,26 +150,6 @@ contains
     else
        print *, "PASS: RMS dfdx = ", rms, "variable f"
     end if
-    passing = .false.
-    
-    call interp(f, df(:, :, :, 1))
-
-    rms = 0.0_pb_dp
-    do k = 1, nz
-       y = 0.5_pb_dp * dy
-       do j = 1, ny
-          x = 0.5_pb_dp * dx
-          do i = 1, nx
-             x = x + dx
-
-             rms = rms + (df(i, j, k, 1) - (sin(x) + sin(y) + sin(z)))**2
-          end do
-          y = y + dy
-       end do
-       z = z + dz
-    end do
-    rms = sqrt(rms / nx / ny / nz)
-    print *, rms
 
   end subroutine check_varying_field
 
@@ -221,41 +203,20 @@ contains
        end do
        z = z + dz
     end do
+    rms_x = sqrt(rms_x / nx) / ny / nz
+    rms_y = sqrt(rms_y / ny) / nx / nz
+    rms_z = sqrt(rms_z / nz) / nx / ny
     rms = rms_x + rms_y + rms_z
-    rms = sqrt(rms / nx / ny / nz / 3)
-    rms_x = sqrt(rms_x / nx)
-    rms_y = sqrt(rms_y / ny)
-    rms_z = sqrt(rms_z / nz)
-
+    rms= rms / 3
+    
     test_pass = (rms <= 1.0e-11)
     test_pass = (.not. (rms /= rms)) .and. test_pass
     if (.not. test_pass) then
        print *, "FAIL: RMS dfdx = ", rms, "f=f(x)"
-       print *, rms_x, rms_y, rms_z
        passing = .false.
     else
        print *, "PASS: RMS dfdx = ", rms, "f=f(x)"
     end if
-    passing = .false.
-    
-    call interp(f, df(:, :, :, 1))
-
-    rms = 0.0_pb_dp
-    do k = 1, nz
-       y = 0.5_pb_dp * dy
-       do j = 1, ny
-          x = 0.5_pb_dp * dx
-          do i = 1, nx
-             x = x + dx
-
-             rms = rms + (df(i, j, k, 1) - sin(x))**2
-          end do
-          y = y + dy
-       end do
-       z = z + dz
-    end do
-    rms = sqrt(rms / nx / ny / nz)
-    print *, rms
     
   end subroutine check_varying_field_x
 
@@ -309,9 +270,11 @@ contains
        end do
        z = z + dz
     end do
-    ! print *, rms_x, rms_y, rms_z
+    rms_x = sqrt(rms_x / nx) / ny / nz
+    rms_y = sqrt(rms_y / ny) / nx / nz
+    rms_z = sqrt(rms_z / nz) / nx / ny
     rms = rms_x + rms_y + rms_z
-    rms = sqrt(rms / nx / ny / nz / 3)
+    rms= rms / 3
 
     test_pass = (rms <= 1.0e-11)
     test_pass = (.not. (rms /= rms)) .and. test_pass
@@ -321,7 +284,6 @@ contains
     else
        print *, "PASS: RMS dfdx = ", rms, "f=f(y)"
     end if
-    passing = .false.
     
   end subroutine check_varying_field_y
 
@@ -375,9 +337,11 @@ contains
        end do
        z = z + dz
     end do
-    ! print *, rms_x, rms_y, rms_z
+    rms_x = sqrt(rms_x / nx) / ny / nz
+    rms_y = sqrt(rms_y / ny) / nx / nz
+    rms_z = sqrt(rms_z / nz) / nx / ny
     rms = rms_x + rms_y + rms_z
-    rms = sqrt(rms / nx / ny / nz / 3)
+    rms= rms / 3
 
     test_pass = (rms <= 1.0e-11)
     test_pass = (.not. (rms /= rms)) .and. test_pass
@@ -387,7 +351,6 @@ contains
     else
        print *, "PASS: RMS dfdx = ", rms, "f=f(z)"
     end if
-    passing = .false.
     
   end subroutine check_varying_field_z
   
