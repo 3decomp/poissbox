@@ -203,12 +203,12 @@ contains
 
     n = size(f)
 
-    rhs(1) = a * (f(2) + opsign * f(1)) + b * (f(3) + opsign * f(n))
-    do i = 2, n - 2
-       rhs(i) = a * (f(i + 1) + opsign * f(i)) + b * (f(i + 2) + opsign * f(i - 1))
+    rhs(1) = a * (f(1) + opsign * f(n)) + b * (f(2) + opsign * f(n - 1))
+    rhs(2) = a * (f(2) + opsign * f(1)) + b * (f(3) + opsign * f(n))
+    do i = 3, n - 1
+       rhs(i) = a * (f(i) + opsign * f(i - 1)) + b * (f(i + 1) + opsign * f(i - 2))
     end do
-    rhs(n - 1) = a * (f(n) + opsign * f(n - 1)) + b * (f(1) + opsign * f(n - 2))
-    rhs(n) = a * (f(1) + opsign * f(n)) + b * (f(2) + opsign * f(n - 1))
+    rhs(n) = a * (f(n) + opsign * f(n - 1)) + b * (f(1) + opsign * f(n - 2))
     
   end subroutine grad_1d_rhs
   

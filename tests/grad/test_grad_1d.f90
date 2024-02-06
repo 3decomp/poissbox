@@ -86,7 +86,7 @@ contains
     real(pb_dp) :: x
     integer :: i
 
-    x = 0.0_pb_dp
+    x = 0.5_pb_dp * dx
     do i = 1, n
        f(i) = sin(x)
 
@@ -95,7 +95,7 @@ contains
 
     call grad_1d(f, dx, df)
 
-    x = 0.5_pb_dp * dx
+    x = 0.0_pb_dp * dx
     rms = 0.0_pb_dp
     do i = 1, n
        expect = cos(x)
@@ -114,7 +114,7 @@ contains
     end if
 
     call interp_1d(f, df)
-    x = 0.5_pb_dp * dx
+    x = 0.0_pb_dp * dx
     rms = 0.0_pb_dp
     do i = 1, n
        expect = sin(x)

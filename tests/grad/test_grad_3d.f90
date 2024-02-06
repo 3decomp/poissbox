@@ -97,11 +97,11 @@ contains
 
     logical :: test_pass
     
-    z = 0.0_pb_dp
+    z = 0.5_pb_dp * dz
     do k = 1, nz
-       y = 0.0_pb_dp
+       y = 0.5_pb_dp * dy
        do j = 1, ny
-          x = 0.0_pb_dp
+          x = 0.5_pb_dp * dx
           do i = 1, nx
              f(i, j, k) = sin(x) + sin(y) + sin(z)
              
@@ -116,12 +116,12 @@ contains
 
     rms = 0.0_pb_dp
     rms_x = 0.0_pb_dp; rms_y = 0.0_pb_dp; rms_z = 0.0_pb_dp
-    z = 0.5_pb_dp * dz
+    z = 0.0_pb_dp * dz
     do k = 1, nz
-       y = 0.5_pb_dp * dy
+       y = 0.0_pb_dp * dy
        expect_z = cos(z)
        do j = 1, ny
-          x = 0.5_pb_dp * dx
+          x = 0.0_pb_dp * dx
           expect_y = cos(y)
           do i = 1, nx
              expect_x = cos(x)
@@ -164,11 +164,11 @@ contains
 
     logical :: test_pass
     
-    z = 0.0_pb_dp
+    z = 0.5_pb_dp * dz
     do k = 1, nz
-       y = 0.0_pb_dp
+       y = 0.5_pb_dp * dy
        do j = 1, ny
-          x = 0.0_pb_dp
+          x = 0.5_pb_dp * dx
           do i = 1, nx
              f(i, j, k) = sin(x)
              
@@ -183,12 +183,12 @@ contains
 
     rms = 0.0_pb_dp
     rms_x = 0.0_pb_dp; rms_y = 0.0_pb_dp; rms_z = 0.0_pb_dp
-    z = 0.5_pb_dp * dz
+    z = 0.0_pb_dp * dz
     do k = 1, nz
-       y = 0.5_pb_dp * dy
+       y = 0.0_pb_dp * dy
        expect_z = 0.0_pb_dp
        do j = 1, ny
-          x = 0.5_pb_dp * dx
+          x = 0.0_pb_dp * dx
           expect_y = 0.0_pb_dp
           do i = 1, nx
              expect_x = cos(x)
@@ -231,11 +231,11 @@ contains
 
     logical :: test_pass
     
-    z = 0.0_pb_dp
+    z = 0.5_pb_dp * dz
     do k = 1, nz
-       y = 0.0_pb_dp
+       y = 0.5_pb_dp * dy
        do j = 1, ny
-          x = 0.0_pb_dp
+          x = 0.5_pb_dp * dx
           do i = 1, nx
              f(i, j, k) = sin(y)
              
@@ -250,12 +250,12 @@ contains
 
     rms = 0.0_pb_dp
     rms_x = 0.0_pb_dp; rms_y = 0.0_pb_dp; rms_z = 0.0_pb_dp
-    z = 0.5_pb_dp * dz
+    z = 0.0_pb_dp * dz
     do k = 1, nz
-       y = 0.5_pb_dp * dy
+       y = 0.0_pb_dp * dy
        expect_z = 0.0_pb_dp
        do j = 1, ny
-          x = 0.5_pb_dp * dx
+          x = 0.0_pb_dp * dx
           expect_y = cos(y)
           do i = 1, nx
              expect_x = 0.0_pb_dp
@@ -298,11 +298,11 @@ contains
 
     logical :: test_pass
     
-    z = 0.0_pb_dp
+    z = 0.5_pb_dp * dz
     do k = 1, nz
-       y = 0.0_pb_dp
+       y = 0.5_pb_dp * dy
        do j = 1, ny
-          x = 0.0_pb_dp
+          x = 0.5_pb_dp * dx
           do i = 1, nx
              f(i, j, k) = sin(z)
              
@@ -317,12 +317,12 @@ contains
 
     rms = 0.0_pb_dp
     rms_x = 0.0_pb_dp; rms_y = 0.0_pb_dp; rms_z = 0.0_pb_dp
-    z = 0.5_pb_dp * dz
+    z = 0.0_pb_dp * dz
     do k = 1, nz
-       y = 0.5_pb_dp * dy
+       y = 0.0_pb_dp * dy
        expect_z = cos(z)
        do j = 1, ny
-          x = 0.5_pb_dp * dx
+          x = 0.0_pb_dp * dx
           expect_y = 0.0_pb_dp
           do i = 1, nx
              expect_x = 0.0_pb_dp
