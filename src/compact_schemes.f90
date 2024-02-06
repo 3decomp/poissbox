@@ -8,6 +8,8 @@ module compact_schemes
   private
   public :: grad, grad_1d
   public :: interp, interp_1d
+  public :: div_1d
+  public :: interp_1d_div
 contains
 
   ! Compute the 3D gradient tensor (staggered) of a field
@@ -107,18 +109,27 @@ contains
   end subroutine interp
   
   ! Compute the 1D gradient (staggered) of a field
-  subroutine grad_1d(f, dx, df)
+  subroutine grad_1d(f, dx, df, opt_stagger)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
     real(pb_dp), intent(in) :: dx                ! Grid spacing
     real(pb_dp), dimension(:), intent(out) :: df ! Gradient
-
+    integer, intent(in), optional :: opt_stagger
+    
     real(pb_dp) :: a, b, alpha ! Scheme parameters
 
     real(pb_dp), dimension(:), allocatable :: ld, d, ud ! Tridiagonal coefficients
 
     integer :: n
 
+    integer :: stagger
+    
+    if (present(opt_stagger)) then
+       stagger = opt_stagger
+    else
+       stagger = -1
+    end if
+    
     n = size(f)
     if (size(df) /= n) then
        print *, "ERROR: periodic gradient is same length as field!"
@@ -137,7 +148,7 @@ contains
     ld(:) = alpha
     d(:) = 1.0_pb_dp
     ud(:) = alpha
-    call grad_1d_rhs(a, b, -1, f, df)
+    call grad_1d_rhs(a, b, -1, stagger, f, df)
     
     !! Solve system
     call tdma_periodic(ld, d, ud, df)
@@ -149,17 +160,37 @@ contains
     
   end subroutine grad_1d
 
-  subroutine interp_1d(f, fi)
+  subroutine div_1d(f, dx, df)
+
+    real(pb_dp), dimension(:), intent(in) :: f   ! Field
+    real(pb_dp), intent(in) :: dx                ! Grid spacing
+    real(pb_dp), dimension(:), intent(out) :: df ! Gradient
+
+    ! Compute derivative using forward (vertex->cell) staggering
+    call grad_1d(f, dx, df, +1)
+    
+  end subroutine div_1d
+  
+  subroutine interp_1d(f, fi, opt_stagger)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
     real(pb_dp), dimension(:), intent(out) :: fi ! Interpolated field
-
+    integer, intent(in), optional :: opt_stagger
+    
     real(pb_dp) :: a, b, alpha ! Scheme parameters
 
     real(pb_dp), dimension(:), allocatable :: ld, d, ud ! Tridiagonal coefficients
 
     integer :: n
 
+    integer :: stagger
+
+    if (present(opt_stagger)) then
+       stagger = opt_stagger
+    else
+       stagger = -1
+    end if
+    
     n = size(f)
     if (size(fi) /= n) then
        print *, "ERROR: periodic gradient is same length as field!"
@@ -178,7 +209,7 @@ contains
     ld(:) = alpha
     d(:) = 1.0_pb_dp
     ud(:) = alpha
-    call grad_1d_rhs(a, b, +1, f, fi)
+    call grad_1d_rhs(a, b, +1, stagger, f, fi)
     
     !! Solve system
     call tdma_periodic(ld, d, ud, fi)
@@ -189,26 +220,56 @@ contains
     deallocate(ud)
     
   end subroutine interp_1d
+
+  subroutine interp_1d_div(f, fi)
+
+    real(pb_dp), dimension(:), intent(in) :: f   ! Field
+    real(pb_dp), dimension(:), intent(out) :: fi ! Interpolated field
+
+    ! Use forward-staggered (vertex->cell) interpolation
+    call interp_1d(f, fi, +1)
+    
+  end subroutine interp_1d_div
   
-  pure subroutine grad_1d_rhs(a, b, opsign, f, rhs)
+  pure subroutine grad_1d_rhs(a, b, opsign, stagger, f, rhs)
 
     real(pb_dp), intent(in) :: a, b ! Scheme parameters
     integer, intent(in) :: opsign   ! Set the sign of the finite difference scheme
                                     ! (-1 difference, +1 interpolation)
+    integer, intent(in) :: stagger  ! Set the direction of the staggering operation 
+                                    ! (-1 from cells->vertices, +1 from vertices->cells)
     real(pb_dp), dimension(:), intent(in) :: f    ! Field
     real(pb_dp), dimension(:), intent(out) :: rhs ! RHS
 
     integer :: i
     integer :: n
 
+    integer :: shift
+
     n = size(f)
 
-    rhs(1) = a * (f(1) + opsign * f(n)) + b * (f(2) + opsign * f(n - 1))
-    rhs(2) = a * (f(2) + opsign * f(1)) + b * (f(3) + opsign * f(n))
-    do i = 3, n - 1
-       rhs(i) = a * (f(i) + opsign * f(i - 1)) + b * (f(i + 1) + opsign * f(i - 2))
+    ! Set index shift
+    if (stagger == -1) then
+       shift = 0
+    else
+       shift = 1
+    end if
+    
+    if (stagger == -1) then
+       rhs(1) = a * (f(1) + opsign * f(n)) + b * (f(2) + opsign * f(n - 1))
+       rhs(2) = a * (f(2) + opsign * f(1)) + b * (f(3) + opsign * f(n))
+    else
+       rhs(1) = a * (f(2) + opsign * f(1)) + b * (f(3) + opsign * f(n))
+    end if
+    do i = 3 - shift, n - 1 - shift
+       rhs(i) = a * (f(i + shift) + opsign * f(i - 1 + shift)) + b * (f(i + 1 + shift) + opsign * f(i - 2 + shift))
     end do
-    rhs(n) = a * (f(n) + opsign * f(n - 1)) + b * (f(1) + opsign * f(n - 2))
+    if (stagger == -1) then
+       rhs(n) = a * (f(n) + opsign * f(n - 1)) + b * (f(1) + opsign * f(n - 2))
+    else
+       rhs(n - 1) = a * (f(n) + opsign * f(n - 1)) + b * (f(1) + opsign * f(n - 2))
+       rhs(n) = a * (f(1) + opsign * f(n)) + b * (f(2) + opsign * f(n - 1))
+    end if
     
   end subroutine grad_1d_rhs
   
