@@ -17,3 +17,7 @@ add_test(NAME test_star COMMAND test_star)
 add_executable(test_lapl test_lapl.f90)
 target_link_libraries(test_lapl poissbox)
 add_test(NAME test_lapl COMMAND test_lapl)
+
+add_executable(test_compact test_compact.f90)
+target_link_libraries(test_compact poissbox)
+add_test(NAME test_compact COMMAND test_compact)
