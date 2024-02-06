@@ -8,8 +8,8 @@ module compact_schemes
   private
   public :: grad, grad_1d
   public :: interp, interp_1d
-  public :: div_1d
-  public :: interp_1d_div
+  public :: div, div_1d
+  public :: interp_div, interp_1d_div
 contains
 
   ! Compute the 3D gradient tensor (staggered) of a field
@@ -66,16 +66,25 @@ contains
   ! Compute the 3D interpolation of a field
   !
   ! XXX: Implemented as Z->Y->X (cell->face->edge->vert)
-  subroutine interp(f, fi)
+  subroutine interp(f, fi, opt_stagger)
 
     real(pb_dp), dimension(:, :, :), intent(in) :: f   ! Field
     real(pb_dp), dimension(:, :, :), intent(out) :: fi ! Interpolated field
-
+    integer, intent(in), optional :: opt_stagger
+    
     real(pb_dp), dimension(:, :, :), allocatable :: ff ! Face-interpolated field
     real(pb_dp), dimension(:, :, :), allocatable :: fe ! Edge-interpolated field
 
     integer :: i, j, k
     integer :: nx, ny, nz
+
+    integer :: stagger
+
+    if (present(opt_stagger)) then
+       stagger = opt_stagger
+    else
+       stagger = -1
+    end if
     
     nx = size(f, 1)
     ny = size(f, 2)
@@ -85,7 +94,7 @@ contains
     allocate(ff, mold=f)
     do j = 1, ny
        do i = 1, nx
-          call interp_1d(f(i, j, :), ff(i, j, :))
+          call interp_1d(f(i, j, :), ff(i, j, :), opt_stagger)
        end do
     end do
 
@@ -93,7 +102,7 @@ contains
     allocate(fe, mold=ff)
     do k = 1, nz
        do i = 1, nx
-          call interp_1d(ff(i, :, k), fe(i, :, k))
+          call interp_1d(ff(i, :, k), fe(i, :, k), opt_stagger)
        end do
     end do
     deallocate(ff)
@@ -101,12 +110,22 @@ contains
     ! Edge->vert interpolation
     do k = 1, nz
        do j = 1, ny
-          call interp_1d(fe(:, j, k), fi(:, j, k))
+          call interp_1d(fe(:, j, k), fi(:, j, k), opt_stagger)
        end do
     end do
     deallocate(fe)
     
   end subroutine interp
+
+  subroutine interp_div(f, fi)
+
+    real(pb_dp), dimension(:, :, :), intent(in) :: f   ! Field
+    real(pb_dp), dimension(:, :, :), intent(out) :: fi ! Interpolated field
+
+    ! Interpolate using forward (vertex->cell) staggering
+    call interp(f, fi, +1)
+    
+  end subroutine interp_div
   
   ! Compute the 1D gradient (staggered) of a field
   subroutine grad_1d(f, dx, df, opt_stagger)
@@ -160,6 +179,58 @@ contains
     
   end subroutine grad_1d
 
+  subroutine div(f, dx, df)
+
+    real(pb_dp), dimension(:, :, :, :), intent(in) :: f ! Vector field
+    real(pb_dp), dimension(3), intent(in) :: dx
+    real(pb_dp), dimension(:, :, :), intent(out) :: df ! Divergence
+
+    real(pb_dp), dimension(:, :, :, :), allocatable :: dfe
+    real(pb_dp), dimension(:, :, :, :), allocatable :: dff
+    real(pb_dp), dimension(:), allocatable :: dfc
+
+    integer :: i, j, k
+    integer :: nx, ny, nz
+    
+    nx = size(f, 1)
+    ny = size(f, 2)
+    nz = size(f, 3)
+
+    ! DDX (Vert->Edge)
+    allocate(dfe, mold=f)
+    do k = 1, nz
+       do j = 1, ny
+          call div_1d(f(:, j, k, 1), dx(1), dfe(:, j, k, 1))
+          call interp_1d_div(f(:, j, k, 2), dfe(:, j, k, 2))
+          call interp_1d_div(f(:, j, k, 3), dfe(:, j, k, 3))
+       end do
+    end do
+    
+    ! DDY (Edge->Face)
+    allocate(dff, mold=dfe)
+    do k = 1, nz
+       do i = 1, nx
+          call interp_1d_div(dfe(i, :, k, 1), dff(i, :, k, 1))
+          call div_1d(dfe(i, :, k, 2), dx(2), dff(i, :, k, 2))
+          call interp_1d_div(dfe(i, :, k, 3), dff(i, :, k, 3))
+       end do
+    end do
+    deallocate(dfe)
+    
+    ! DDZ (Face->Cell)
+    allocate(dfc(nz))
+    do j = 1, ny
+       do i = 1, nx
+          call interp_1d_div(dff(i, j, :, 1) + dff(i, j, :, 2), dfc)
+          call div_1d(dff(i, j, :, 3), dx(3), df(i, j, :))
+          df(i, j, :) = df(i, j, :) + dfc(:)
+       end do
+    end do
+    
+    deallocate(dff)
+    deallocate(dfc)
+  end subroutine div
+  
   subroutine div_1d(f, dx, df)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
