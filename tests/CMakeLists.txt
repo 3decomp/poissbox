@@ -12,5 +12,6 @@ add_subdirectory(coefficients)
 # Tridiagonal solver tests
 add_subdirectory(tridiag)
 
-# Gradient evaluation tests
+# Gradient/divergence evaluation tests
 add_subdirectory(grad)
+add_subdirectory(div)
