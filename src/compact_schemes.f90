@@ -127,7 +127,7 @@ contains
     
   end subroutine interp_div
   
-  ! Compute the 1D gradient (staggered) of a field
+  ! Compute the 1D gradient (staggered) of a field, default backward stagger (cell->vertex)
   subroutine grad_1d(f, dx, df, opt_stagger)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
@@ -167,7 +167,7 @@ contains
     ld(:) = alpha
     d(:) = 1.0_pb_dp
     ud(:) = alpha
-    call grad_1d_rhs(a, b, -1, stagger, f, df)
+    call eval_1d_rhs(a, b, -1, stagger, f, df)
     
     !! Solve system
     call tdma_periodic(ld, d, ud, df)
@@ -179,6 +179,7 @@ contains
     
   end subroutine grad_1d
 
+  ! Compute the divergence of a vector field
   subroutine div(f, dx, df)
 
     real(pb_dp), dimension(:, :, :, :), intent(in) :: f ! Vector field
@@ -230,18 +231,19 @@ contains
     deallocate(dff)
     deallocate(dfc)
   end subroutine div
-  
+
+  ! Compute the divergence of a 1-D field (forward stagger: vertex->cell)
   subroutine div_1d(f, dx, df)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
     real(pb_dp), intent(in) :: dx                ! Grid spacing
     real(pb_dp), dimension(:), intent(out) :: df ! Gradient
 
-    ! Compute derivative using forward (vertex->cell) staggering
     call grad_1d(f, dx, df, +1)
     
   end subroutine div_1d
-  
+
+  ! Interpolate a 1-D field, default backwards stagger (cell->vertex)
   subroutine interp_1d(f, fi, opt_stagger)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
@@ -280,7 +282,7 @@ contains
     ld(:) = alpha
     d(:) = 1.0_pb_dp
     ud(:) = alpha
-    call grad_1d_rhs(a, b, +1, stagger, f, fi)
+    call eval_1d_rhs(a, b, +1, stagger, f, fi)
     
     !! Solve system
     call tdma_periodic(ld, d, ud, fi)
@@ -292,17 +294,18 @@ contains
     
   end subroutine interp_1d
 
+  ! Interpolate a 1-D field (forward stagger: vertex->cell)
   subroutine interp_1d_div(f, fi)
 
     real(pb_dp), dimension(:), intent(in) :: f   ! Field
     real(pb_dp), dimension(:), intent(out) :: fi ! Interpolated field
 
-    ! Use forward-staggered (vertex->cell) interpolation
     call interp_1d(f, fi, +1)
     
   end subroutine interp_1d_div
-  
-  pure subroutine grad_1d_rhs(a, b, opsign, stagger, f, rhs)
+
+  ! General function for evaluating RHS of staggered compact scheme.
+  pure subroutine eval_1d_rhs(a, b, opsign, stagger, f, rhs)
 
     real(pb_dp), intent(in) :: a, b ! Scheme parameters
     integer, intent(in) :: opsign   ! Set the sign of the finite difference scheme
@@ -342,6 +345,6 @@ contains
        rhs(n) = a * (f(1) + opsign * f(n)) + b * (f(2) + opsign * f(n - 1))
     end if
     
-  end subroutine grad_1d_rhs
+  end subroutine eval_1d_rhs
   
 end module compact_schemes
