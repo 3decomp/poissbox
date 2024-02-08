@@ -10,7 +10,31 @@ module compact_schemes
   public :: interp, interp_1d
   public :: div, div_1d
   public :: interp_div, interp_1d_div
+  public :: lapl
 contains
+
+  ! Compute the Laplacian of a 3-D field using staggered cell->vertex->cell evaluation.
+  subroutine lapl(f, dx, d2fdx2)
+
+    real(pb_dp), dimension(:, :, :), intent(in) :: f
+    real(pb_dp), dimension(3), intent(in) :: dx
+    real(pb_dp), dimension(:, :, :), intent(out) :: d2fdx2
+
+    real(pb_dp), dimension(:, :, :, :), allocatable :: df
+
+    integer :: nx, ny, nz
+
+    nx = size(f, 1)
+    ny = size(f, 2)
+    nz = size(f, 3)
+    allocate(df(nx, ny, nz, 3))
+
+    call grad(f, dx, df)
+    call div(df, dx, d2fdx2)
+    
+    deallocate(df)
+    
+  end subroutine lapl
 
   ! Compute the 3D gradient tensor (staggered) of a field
   !
