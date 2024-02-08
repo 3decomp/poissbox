@@ -27,9 +27,10 @@ program poissbox_example
   integer, dimension(3), parameter :: n = [nx, ny, nz]
 
   !! Problem dimension - hardcoded for simplicity
-  real(pb_dp), parameter :: Lx = 1.0_pb_dp
-  real(pb_dp), parameter :: Ly = 1.0_pb_dp
-  real(pb_dp), parameter :: Lz = 1.0_pb_dp
+  real(pb_dp), parameter :: pi = 4 * atan(1.0_pb_dp)
+  real(pb_dp), parameter :: Lx = 2 * pi
+  real(pb_dp), parameter :: Ly = 2 * pi
+  real(pb_dp), parameter :: Lz = 2 * pi
   real(pb_dp), parameter :: dx = Lx / nx
   real(pb_dp), parameter :: dy = Ly / ny
   real(pb_dp), parameter :: dz = Lz / nz
@@ -151,11 +152,11 @@ contains
 
   end subroutine check_linear_system
 
-  subroutine set_solution(da, x)
+  subroutine set_solution(da, f)
     !! Sets an initial value in the solution vector
 
     type(tDM), intent(in) :: da
-    type(tVec), intent(inout) :: x
+    type(tVec), intent(inout) :: f
 
     integer :: istart, jstart, kstart
     integer :: ni, nj, nk
@@ -164,37 +165,47 @@ contains
 
     integer :: ierr
 
-    real(pb_dp), dimension(:, :, :), pointer :: xdof
-    real(pb_dp) :: x_p ! Value at DoF P
-    real(pb_dp) :: xsum, xsum_v ! Vector sum, used to check the vector contents
+    real(pb_dp) :: x, y, z
+    
+    real(pb_dp), dimension(:, :, :), pointer :: fdof
+    real(pb_dp) :: f_p ! Value at DoF P
+    real(pb_dp) :: fsum, fsum_v ! Vector sum, used to check the vector contents
 
-    xsum = 0.0d0
+    fsum = 0.0d0
 
     call DMDAGetCorners(da, istart, jstart, kstart, ni, nj, nk, ierr)
 
-    call DMDAVecGetArrayF90(da, x, xdof, ierr)
-    
-    do k = kstart, nk - 1
-       do j = jstart, nj - 1
-          do i = istart, ni - 1
-             call random_number(x_p) ! Get random number 0 <= x <= 1
-             x_p = 2 * (0.5d0 - x_p) ! Rescale to -1 <= x <= 1
+    call DMDAVecGetArrayF90(da, f, fdof, ierr)
 
-             xdof(i, j, k) = x_p
+    z = 0.5_pb_dp * dz
+    do k = kstart, nk - 1
+       y = 0.5_pb_dp * dy
+       do j = jstart, nj - 1
+          x = 0.5_pb_dp * dx
+          do i = istart, ni - 1
+             ! call random_number(f_p) ! Get random number 0 <= f <= 1
+             ! f_p = 2 * (0.5d0 - f_p) ! Rescale to -1 <= f <= 1
+             f_p = sin(x) + sin(y) + sin(z)
              
-             xsum = xsum + x_p ! Compute vector sum
+             fdof(i, j, k) = f_p
+             
+             fsum = fsum + f_p ! Compute vector sum
+
+             x = x + dx
           end do
+          y = y + dy
        end do
+       z = z + dz
     end do
 
-    call DMDAVecRestoreArrayF90(da, x, xdof, ierr)
-    call VecAssemblyBegin(x, ierr)
-    call VecAssemblyEnd(x, ierr)
+    call DMDAVecRestoreArrayF90(da, f, fdof, ierr)
+    call VecAssemblyBegin(f, ierr)
+    call VecAssemblyEnd(f, ierr)
     
     ! Check vector contents using vector sum
-    call VecSum(x, xsum_v, ierr)
-    call MPI_Allreduce(MPI_IN_PLACE, xsum, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-    print *, "Rank ", irank, "Delta of XSUM norms computed directly and from X: ", xsum_v - xsum, xsum_v, xsum
+    call VecSum(f, fsum_v, ierr)
+    call MPI_Allreduce(MPI_IN_PLACE, fsum, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+    print *, "Rank ", irank, "Delta of FSUM norms computed directly and from F: ", fsum_v - fsum, fsum_v, fsum
 
   end subroutine set_solution
 
