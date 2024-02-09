@@ -42,6 +42,8 @@ target_link_libraries(poissbox PkgConfig::PETSC)
 
 add_executable(poissbox_demo src/example.f90)
 target_link_libraries(poissbox_demo poissbox)
+add_executable(compare_fd_compact src/compare_fd_compact.f90)
+target_link_libraries(compare_fd_compact poissbox)
 
 ## Testing
 include(CTest)

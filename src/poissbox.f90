@@ -77,7 +77,9 @@ module compute_lapl
   implicit none
 
   private
+  public :: evaluate_laplacian_pointwise
   public :: compute_lapl_pointwise
+  public :: compute_lapl_compact
   
 contains
   
@@ -125,6 +127,43 @@ contains
     
   end subroutine compute_lapl_pointwise
 
+  subroutine compute_lapl_compact(da, x, dx, b)
+
+    use compact_schemes, only : lapl
+    
+    type(tDM), intent(in) :: da
+    type(tVec), intent(in) :: x     ! The (current) solution
+    real(pb_dp), dimension(3) :: dx ! The grid spacing
+    type(tVec), intent(in) :: b     ! The computed Laplacian
+
+    integer :: istart, jstart, kstart
+    integer :: ni, nj, nk
+    
+    integer :: ierr
+
+    type(tVec) :: xlocal ! Ghosted x
+    real(pb_dp), dimension(:, :, :), pointer :: xdof
+    real(pb_dp), dimension(:, :, :), pointer :: bdof
+
+    call DMGetLocalVector(da, xlocal, ierr)
+    call DMGlobalToLocal(da, x, INSERT_VALUES, xlocal, ierr)
+    
+    call DMDAGetCorners(da, istart, jstart, kstart, ni, nj, nk, ierr)
+
+    call DMDAVecGetArrayF90(da, xlocal, xdof, ierr)
+    call DMDAVecGetArrayF90(da, b, bdof, ierr)
+    
+    call lapl(xdof(istart:istart + (ni - 1),jstart:jstart + (nj - 1),kstart:kstart + (nk - 1)), &
+              dx, &
+              bdof(istart:istart + (ni - 1),jstart:jstart + (nj - 1),kstart:kstart + (nk - 1)))
+    
+    call DMDAVecRestoreArrayF90(da, xlocal, xdof, ierr)
+    call DMDAVecRestoreArrayF90(da, b, bdof, ierr)
+    
+    call DMRestoreLocalVector(da, xlocal, ierr)
+
+  end subroutine compute_lapl_compact
+  
   real(pb_dp) pure function evaluate_laplacian_pointwise(f, grid_deltas)
     !! Applies the Laplacian stencil at a point.
     
@@ -313,7 +352,11 @@ contains
     type(mat_ctx), pointer :: ctx
     
     call MatShellGetContext(M, ctx, ierr)
-    call compute_lapl_pointwise(ctx%da, ctx%grid_deltas, x, f)
+    if (.true.) then
+       call compute_lapl_compact(ctx%da, x, ctx%grid_deltas, f)
+    else
+       call compute_lapl_pointwise(ctx%da, ctx%grid_deltas, x, f)
+    end if
     
     ! associate(foo => M)
     ! end associate

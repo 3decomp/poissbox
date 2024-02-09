@@ -8,6 +8,7 @@ by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versioning 
 
 ### Added
 
+- Implement serial Poisson solver based on compact schemes
 - Implement compact Laplacian operator based on div(grad(f))
 - Implement compact schemes for gradient and divergence operations
 - Implement tridiagonal solver
